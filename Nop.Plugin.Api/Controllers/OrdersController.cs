@@ -531,7 +531,8 @@ namespace Nop.Plugin.Api.Controllers
             {
                 StoreId = newOrder.StoreId,
                 CustomerId = customer.Id,
-                PaymentMethodSystemName = newOrder.PaymentMethodSystemName
+                PaymentMethodSystemName = newOrder.PaymentMethodSystemName,
+                OrderGuid = newOrder.OrderGuid
             };
 
 
