@@ -532,9 +532,12 @@ namespace Nop.Plugin.Api.Controllers
                 StoreId = newOrder.StoreId,
                 CustomerId = customer.Id,
                 PaymentMethodSystemName = newOrder.PaymentMethodSystemName,
-                OrderGuid = newOrder.OrderGuid
+                OrderGuid = newOrder.OrderGuid,
+                CustomValues = new Dictionary<string, object>()
             };
 
+            // MAJAKO CHANGES
+            processPaymentRequest.CustomValues.Add("from", newOrder.CustomValuesXml);
 
             var placeOrderResult = _orderProcessingService.PlaceOrder(processPaymentRequest);
 
