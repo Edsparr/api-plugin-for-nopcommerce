@@ -537,7 +537,7 @@ namespace Nop.Plugin.Api.Controllers
             };
 
             // MAJAKO CHANGES
-            processPaymentRequest.CustomValues.Add("from", newOrder.CustomValuesXml);
+            processPaymentRequest.CustomValues.Add("textalk", newOrder.CustomOrderNumber);
 
             var placeOrderResult = _orderProcessingService.PlaceOrder(processPaymentRequest);
 
