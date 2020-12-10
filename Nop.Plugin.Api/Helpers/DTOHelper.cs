@@ -29,6 +29,7 @@ using Nop.Services.Stores;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Nop.Plugin.Api.DTOs;
 
 namespace Nop.Plugin.Api.Helpers
 {
@@ -154,7 +155,7 @@ namespace Nop.Plugin.Api.Helpers
             return categoryDto;
         }
 
-        public OrderDto PrepareOrderDTO(Order order)
+        public OrderDto PrepareOrderDTO(Order order, bool restrictedAccess = false)
         {
             var orderDto = order.ToDto();
 
@@ -165,6 +166,23 @@ namespace Nop.Plugin.Api.Helpers
             if (customerDto != null)
             {
                 orderDto.Customer = customerDto.ToOrderCustomerDto();
+            }
+
+            if (restrictedAccess)
+            {
+                var billingAddress = new AddressDto
+                {
+                    CountryName = orderDto.BillingAddress?.CountryName
+                };
+            
+                var shippingAddress = new AddressDto
+                {
+                    CountryName = orderDto.ShippingAddress?.CountryName
+                };
+
+                orderDto.BillingAddress = billingAddress;
+                orderDto.ShippingAddress = shippingAddress;
+                orderDto.Customer = null;
             }
 
             return orderDto;

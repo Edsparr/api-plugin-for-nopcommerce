@@ -11,6 +11,7 @@ using Nop.Plugin.Api.DTOs;
 using Nop.Plugin.Api.DTOs.Customers;
 using Nop.Plugin.Api.Factories;
 using Nop.Plugin.Api.Helpers;
+using Nop.Plugin.Api.Infrastructure;
 using Nop.Plugin.Api.JSON.ActionResults;
 using Nop.Plugin.Api.MappingExtensions;
 using Nop.Plugin.Api.ModelBinders;
@@ -35,6 +36,7 @@ namespace Nop.Plugin.Api.Controllers
     using JSON.Serializers;
 
     [ApiAuthorize(Policy = JwtBearerDefaults.AuthenticationScheme, AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [RestrictClientIdsAuthorization]
     public class CustomersController : BaseApiController
     {
         private readonly ICustomerApiService _customerApiService;

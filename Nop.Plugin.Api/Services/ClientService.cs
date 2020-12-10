@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
+using Nop.Plugin.Api.Domain;
+using Nop.Services.Logging;
 
 namespace Nop.Plugin.Api.Services
 {
@@ -17,10 +20,14 @@ namespace Nop.Plugin.Api.Services
     public class ClientService : IClientService
     {
         private readonly IConfigurationDbContext _configurationDbContext;
+        private readonly ApiSettings _apiSettings;
+        private readonly ILogger _logger;
 
-        public ClientService(IConfigurationDbContext configurationDbContext)
+        public ClientService(IConfigurationDbContext configurationDbContext, ApiSettings apiSettings, ILogger logger)
         {
             _configurationDbContext = configurationDbContext;
+            _apiSettings = apiSettings;
+            _logger = logger;
         }
         
         public IList<ClientApiModel> GetAllClients()
@@ -156,6 +163,31 @@ namespace Nop.Plugin.Api.Services
                 .FirstOrDefault(client => client.ClientId == clientId);
 
             return currentClient?.ToApiModel();
+        }
+
+        public bool UserHasRestrictedAccess(ClaimsPrincipal user)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_apiSettings.RestrictedClientIds)) return false;
+
+                var identity = user.Identity as ClaimsIdentity;
+
+                var clientIdClaim = identity?.Claims?.FirstOrDefault(x => x.Type.Equals("sub"));
+
+                if (clientIdClaim == null) return false;
+            
+                var restrictedClientIds = _apiSettings.RestrictedClientIds.Split(',').ToList();
+
+                if (!restrictedClientIds.Any()) return false;
+
+                return restrictedClientIds.Contains(clientIdClaim.Value);
+            }
+            catch (Exception e)
+            {
+                _logger.Error("API UserHasRestrictedAccess error", e);
+                return false;
+            }
         }
 
         public void DeleteClient(int id)

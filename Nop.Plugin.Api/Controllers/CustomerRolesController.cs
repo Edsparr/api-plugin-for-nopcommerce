@@ -2,6 +2,7 @@
 using System.Linq;
 using Nop.Plugin.Api.Attributes;
 using Nop.Plugin.Api.DTOs.CustomerRoles;
+using Nop.Plugin.Api.Infrastructure;
 using Nop.Plugin.Api.JSON.ActionResults;
 using Nop.Plugin.Api.MappingExtensions;
 using Nop.Services.Customers;
@@ -21,6 +22,7 @@ namespace Nop.Plugin.Api.Controllers
     using JSON.Serializers;
 
     [ApiAuthorize(Policy = JwtBearerDefaults.AuthenticationScheme, AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [RestrictClientIdsAuthorization]
     public class CustomerRolesController : BaseApiController
     {
         public CustomerRolesController(

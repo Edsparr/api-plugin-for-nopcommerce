@@ -29,10 +29,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Nop.Plugin.Api.Infrastructure;
 
 namespace Nop.Plugin.Api.Controllers
 {
     [ApiAuthorize(Policy = JwtBearerDefaults.AuthenticationScheme, AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [RestrictClientIdsAuthorization]
     public class ManufacturersController : BaseApiController
     {
         private readonly IFactory<Manufacturer> _factory;

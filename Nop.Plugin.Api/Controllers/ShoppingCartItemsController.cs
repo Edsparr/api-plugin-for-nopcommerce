@@ -23,6 +23,7 @@ using Nop.Services.Security;
 using Nop.Services.Stores;
 using Nop.Plugin.Api.Helpers;
 using Nop.Core;
+using Nop.Plugin.Api.Infrastructure;
 
 namespace Nop.Plugin.Api.Controllers
 {
@@ -32,6 +33,7 @@ namespace Nop.Plugin.Api.Controllers
     using JSON.Serializers;
 
     [ApiAuthorize(Policy = JwtBearerDefaults.AuthenticationScheme, AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [RestrictClientIdsAuthorization]
     public class ShoppingCartItemsController : BaseApiController
     {
         private readonly IShoppingCartItemApiService _shoppingCartItemApiService;

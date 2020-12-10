@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Security.Claims;
 
 namespace Nop.Plugin.Api.Services
 {
@@ -12,5 +13,6 @@ namespace Nop.Plugin.Api.Services
         void UpdateClient(ClientApiModel model);
         ClientApiModel FindClientByIdAsync(int id);
         ClientApiModel FindClientByClientId(string clientId);
+        bool UserHasRestrictedAccess(ClaimsPrincipal user);
     }
 }

@@ -19,7 +19,7 @@ namespace Nop.Plugin.Api.Helpers
     {
         ProductDto PrepareProductDTO(Product product);
         CategoryDto PrepareCategoryDTO(Category category);
-        OrderDto PrepareOrderDTO(Order order);
+        OrderDto PrepareOrderDTO(Order order, bool restrictedAccess = false);
         ShoppingCartItemDto PrepareShoppingCartItemDTO(ShoppingCartItem shoppingCartItem);
         OrderItemDto PrepareOrderItemDTO(OrderItem orderItem);
         StoreDto PrepareStoreDTO(Store store);

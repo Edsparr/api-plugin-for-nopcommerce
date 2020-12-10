@@ -12,6 +12,7 @@ using Nop.Plugin.Api.Delta;
 using Nop.Plugin.Api.DTOs.Errors;
 using Nop.Plugin.Api.DTOs.OrderItems;
 using Nop.Plugin.Api.Helpers;
+using Nop.Plugin.Api.Infrastructure;
 using Nop.Plugin.Api.JSON.ActionResults;
 using Nop.Plugin.Api.JSON.Serializers;
 using Nop.Plugin.Api.MappingExtensions;
@@ -33,6 +34,7 @@ namespace Nop.Plugin.Api.Controllers
 {
     [ApiAuthorize(Policy = JwtBearerDefaults.AuthenticationScheme,
         AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [RestrictClientIdsAuthorization]
     public class OrderItemsController : BaseApiController
     {
         private readonly IDTOHelper _dtoHelper;

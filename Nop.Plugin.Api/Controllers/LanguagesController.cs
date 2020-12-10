@@ -3,6 +3,7 @@ using System.Linq;
 using Nop.Plugin.Api.Attributes;
 using Nop.Plugin.Api.DTOs.Languages;
 using Nop.Plugin.Api.Helpers;
+using Nop.Plugin.Api.Infrastructure;
 using Nop.Plugin.Api.JSON.ActionResults;
 using Nop.Services.Customers;
 using Nop.Services.Discounts;
@@ -21,6 +22,7 @@ namespace Nop.Plugin.Api.Controllers
     using JSON.Serializers;
 
     [ApiAuthorize(Policy = JwtBearerDefaults.AuthenticationScheme, AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [RestrictClientIdsAuthorization]
     public class LanguagesController : BaseApiController
     {
         private ILanguageService _languageService;

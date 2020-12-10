@@ -7,6 +7,7 @@ using Nop.Plugin.Api.Attributes;
 using Nop.Plugin.Api.Constants;
 using Nop.Plugin.Api.DTOs.Categories;
 using Nop.Plugin.Api.DTOs.Errors;
+using Nop.Plugin.Api.Infrastructure;
 using Nop.Plugin.Api.JSON.ActionResults;
 using Nop.Plugin.Api.JSON.Serializers;
 using Nop.Plugin.Api.MappingExtensions;
@@ -24,6 +25,7 @@ using Nop.Services.Stores;
 namespace Nop.Plugin.Api.Controllers
 {
     [ApiAuthorize(Policy = JwtBearerDefaults.AuthenticationScheme, AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [RestrictClientIdsAuthorization]
     public class NewsLetterSubscriptionController : BaseApiController
     {
         private readonly INewsLetterSubscriptionApiService _newsLetterSubscriptionApiService;

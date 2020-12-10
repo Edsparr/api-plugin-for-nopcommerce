@@ -32,6 +32,7 @@ using Nop.Services.Security;
 using Nop.Services.Shipping;
 using Nop.Services.Stores;
 using Microsoft.AspNetCore.Mvc;
+using Nop.Plugin.Api.Infrastructure;
 
 namespace Nop.Plugin.Api.Controllers
 {
@@ -51,6 +52,7 @@ namespace Nop.Plugin.Api.Controllers
         private readonly IShippingService _shippingService;
         private readonly IDTOHelper _dtoHelper;        
         private readonly IProductAttributeConverter _productAttributeConverter;
+        private readonly IClientService _clientService;
         private readonly IStoreContext _storeContext;
         private readonly IFactory<Order> _factory;
 
@@ -79,7 +81,7 @@ namespace Nop.Plugin.Api.Controllers
             IShippingService shippingService,
             IPictureService pictureService,
             IDTOHelper dtoHelper,
-            IProductAttributeConverter productAttributeConverter)
+            IProductAttributeConverter productAttributeConverter, IClientService clientService)
             : base(jsonFieldsSerializer, aclService, customerService, storeMappingService,
                  storeService, discountService, customerActivityService, localizationService,pictureService)
         {
@@ -94,6 +96,7 @@ namespace Nop.Plugin.Api.Controllers
             _dtoHelper = dtoHelper;
             _productService = productService;
             _productAttributeConverter = productAttributeConverter;
+            _clientService = clientService;
         }
 
         /// <summary>
@@ -128,7 +131,9 @@ namespace Nop.Plugin.Api.Controllers
                 parameters.Status, parameters.PaymentStatus, parameters.ShippingStatus,
                 parameters.CustomerId, storeId);
 
-            IList<OrderDto> ordersAsDtos = orders.Select(x => _dtoHelper.PrepareOrderDTO(x)).ToList();
+            var restrictedAccess = _clientService.UserHasRestrictedAccess(User);
+
+            IList<OrderDto> ordersAsDtos = orders.Select(x => _dtoHelper.PrepareOrderDTO(x, restrictedAccess)).ToList();
 
             var ordersRootObject = new OrdersRootObject()
             {
@@ -196,8 +201,9 @@ namespace Nop.Plugin.Api.Controllers
             }
 
             var ordersRootObject = new OrdersRootObject();
-
-            var orderDto = _dtoHelper.PrepareOrderDTO(order);
+            
+            var restrictedAccess = _clientService.UserHasRestrictedAccess(User);
+            var orderDto = _dtoHelper.PrepareOrderDTO(order, restrictedAccess);
             ordersRootObject.Orders.Add(orderDto);
 
             var json = JsonFieldsSerializer.Serialize(ordersRootObject, fields);
@@ -218,7 +224,8 @@ namespace Nop.Plugin.Api.Controllers
         [GetRequestsErrorInterceptorActionFilter]
         public IActionResult GetOrdersByCustomerId(int customerId)
         {
-            IList<OrderDto> ordersForCustomer = _orderApiService.GetOrdersByCustomerId(customerId).Select(x => _dtoHelper.PrepareOrderDTO(x)).ToList();
+            var restrictedAccess = _clientService.UserHasRestrictedAccess(User);
+            IList<OrderDto> ordersForCustomer = _orderApiService.GetOrdersByCustomerId(customerId).Select(x => _dtoHelper.PrepareOrderDTO(x, restrictedAccess)).ToList();
 
             var ordersRootObject = new OrdersRootObject()
             {
@@ -235,8 +242,14 @@ namespace Nop.Plugin.Api.Controllers
         [ProducesResponseType(typeof(ErrorsRootObject), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(ErrorsRootObject), 422)]
+        [RestrictClientIdsAuthorization]
         public IActionResult CreateOrder([ModelBinder(typeof(JsonModelBinder<OrderDto>))] Delta<OrderDto> orderDelta)
         {
+            if (_clientService.UserHasRestrictedAccess(User))
+            {
+                return Error(HttpStatusCode.Unauthorized);
+            }
+            
             // Here we display the errors if the validation has failed at some point.
             if (!ModelState.IsValid)
             {
@@ -336,6 +349,7 @@ namespace Nop.Plugin.Api.Controllers
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(ErrorsRootObject), 422)]
         [GetRequestsErrorInterceptorActionFilter]
+        [RestrictClientIdsAuthorization]
         public IActionResult DeleteOrder(int id)
         {
             if (id <= 0)
@@ -365,6 +379,7 @@ namespace Nop.Plugin.Api.Controllers
         [ProducesResponseType(typeof(ErrorsRootObject), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(ErrorsRootObject), 422)]
+        [RestrictClientIdsAuthorization]
         public IActionResult UpdateOrder([ModelBinder(typeof(JsonModelBinder<OrderDto>))] Delta<OrderDto> orderDelta)
         {
             // Here we display the errors if the validation has failed at some point.

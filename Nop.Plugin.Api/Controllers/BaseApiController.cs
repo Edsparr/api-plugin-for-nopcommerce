@@ -14,6 +14,7 @@ using Nop.Services.Media;
 using Nop.Services.Security;
 using Nop.Services.Stores;
 using Microsoft.AspNetCore.Mvc;
+using Nop.Plugin.Api.Services;
 
 namespace Nop.Plugin.Api.Controllers
 {
