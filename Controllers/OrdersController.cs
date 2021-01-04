@@ -532,9 +532,13 @@ namespace Nop.Plugin.Api.Controllers
             {
                 StoreId = newOrder.StoreId,
                 CustomerId = customer.Id,
-                PaymentMethodSystemName = newOrder.PaymentMethodSystemName
+                PaymentMethodSystemName = newOrder.PaymentMethodSystemName,
+                OrderGuid = newOrder.OrderGuid, // majako changes: fix guid
+                CustomValues = new Dictionary<string, object>() // majako changes: note for order from textalk
             };
 
+            // MAJAKO CHANGES
+            processPaymentRequest.CustomValues.Add("textalk", newOrder.CustomOrderNumber);
 
             var placeOrderResult = _orderProcessingService.PlaceOrder(processPaymentRequest);
 

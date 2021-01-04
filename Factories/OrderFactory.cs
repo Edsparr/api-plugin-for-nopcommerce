@@ -12,11 +12,11 @@ namespace Nop.Plugin.Api.Factories
             var order = new Order();
 
             order.CreatedOnUtc = DateTime.UtcNow;
-            order.OrderGuid = new Guid();
+            order.OrderGuid = Guid.NewGuid(); // majako changes: fix guid
             order.PaymentStatus = PaymentStatus.Pending;
             order.ShippingStatus = ShippingStatus.NotYetShipped;
             order.OrderStatus = OrderStatus.Pending;
-
+            
             return order;
         }
     }

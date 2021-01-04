@@ -44,6 +44,7 @@ namespace Nop.Plugin.Api.Controllers
         private readonly ILanguageService _languageService;
         private readonly IFactory<Customer> _factory;
         private readonly IDTOHelper _dtoHelper;
+        private readonly IAddressService _addressService;
 
         // We resolve the customer settings this way because of the tests.
         // The auto mocking does not support concreate types as dependencies. It supports only interfaces.
@@ -82,7 +83,8 @@ namespace Nop.Plugin.Api.Controllers
             INewsLetterSubscriptionService newsLetterSubscriptionService,
             IPictureService pictureService,
             ILanguageService languageService,
-            IDTOHelper dtoHelper) : 
+            IDTOHelper dtoHelper,
+            IAddressService addressService) : 
             base(jsonFieldsSerializer, 
                 aclService, 
                 customerService, 
@@ -103,6 +105,7 @@ namespace Nop.Plugin.Api.Controllers
             _genericAttributeService = genericAttributeService;
             _customerRolesHelper = customerRolesHelper;
             _dtoHelper = dtoHelper;
+            _addressService = addressService;
         }
 
         /// <summary>
@@ -266,13 +269,22 @@ namespace Nop.Plugin.Api.Controllers
                 return Error(HttpStatusCode.Conflict, nameof(Customer.Email), "Email is already registered");
 
             //If the validation has passed the customerDelta object won't be null for sure so we don't need to check for this.
-
+            
             // Inserting the new customer
             var newCustomer = _factory.Initialize();
             customerDelta.Merge(newCustomer);
+            
+            // majako changes: need to create customer then address then customerAddress so their Ids wont be 0
+            CustomerService.InsertCustomer(newCustomer);
 
             foreach (var address in customerDelta.Dto.Addresses)
             {
+                var addressEntity = address.ToEntity();
+                if (address.Id == 0)
+                {
+                    _addressService.InsertAddress(addressEntity);
+                    address.Id = addressEntity.Id;
+                }
                 // we need to explicitly set the date as if it is not specified
                 // it will default to 01/01/0001 which is not supported by SQL Server and throws and exception
                 if (address.CreatedOnUtc == null)
@@ -283,7 +295,38 @@ namespace Nop.Plugin.Api.Controllers
                 CustomerService.InsertCustomerAddress(newCustomer, address.ToEntity());
             }
 
-            CustomerService.InsertCustomer(newCustomer);
+            // majako changes: insert customer billing and shipping addresses
+            if (customerDelta.Dto.BillingAddress != null)
+            {
+                var billingAddress = customerDelta.Dto.BillingAddress.ToEntity();
+                _addressService.InsertAddress(billingAddress);
+                newCustomer.BillingAddressId = billingAddress.Id;
+                // we need to explicitly set the date as if it is not specified
+                // it will default to 01/01/0001 which is not supported by SQL Server and throws and exception
+                if (customerDelta.Dto.BillingAddress.CreatedOnUtc == null)
+                {
+                    billingAddress.CreatedOnUtc = DateTime.UtcNow;
+                }
+
+                CustomerService.InsertCustomerAddress(newCustomer, billingAddress);
+            }
+            
+            if (customerDelta.Dto.ShippingAddress != null)
+            {
+                var shippingAddress = customerDelta.Dto.ShippingAddress.ToEntity();
+                _addressService.InsertAddress(shippingAddress);
+                newCustomer.ShippingAddressId = shippingAddress.Id;
+                // we need to explicitly set the date as if it is not specified
+                // it will default to 01/01/0001 which is not supported by SQL Server and throws and exception
+                if (customerDelta.Dto.ShippingAddress.CreatedOnUtc == null)
+                {
+                    shippingAddress.CreatedOnUtc = DateTime.UtcNow;
+                }
+
+                CustomerService.InsertCustomerAddress(newCustomer, shippingAddress);
+            }
+            
+            CustomerService.UpdateCustomer(newCustomer);
 
             InsertFirstAndLastNameGenericAttributes(customerDelta.Dto.FirstName, customerDelta.Dto.LastName, newCustomer);
 
@@ -370,6 +413,13 @@ namespace Nop.Plugin.Api.Controllers
                 foreach (var passedAddress in customerDelta.Dto.Addresses)
                 {
                     var addressEntity = passedAddress.ToEntity();
+
+                    // majako changes: ensure addresses exists
+                    if (passedAddress.Id == 0)
+                    {
+                        _addressService.InsertAddress(addressEntity);
+                        passedAddress.Id = addressEntity.Id;
+                    }
 
                     if (currentCustomerAddresses.ContainsKey(passedAddress.Id))
                     {
@@ -503,6 +553,7 @@ namespace Nop.Plugin.Api.Controllers
             var allCustomerRoles = CustomerService.GetAllCustomerRoles(true);
             foreach (var customerRole in allCustomerRoles)
             {
+                if (string.IsNullOrEmpty(customerRole.SystemName)) continue;
                 if (customerDelta.Dto.RoleIds.Contains(customerRole.Id))
                 {
                     //new role
