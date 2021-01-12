@@ -277,23 +277,7 @@ namespace Nop.Plugin.Api.Controllers
             // majako changes: need to create customer then address then customerAddress so their Ids wont be 0
             CustomerService.InsertCustomer(newCustomer);
 
-            foreach (var address in customerDelta.Dto.Addresses)
-            {
-                var addressEntity = address.ToEntity();
-                if (address.Id == 0)
-                {
-                    _addressService.InsertAddress(addressEntity);
-                    address.Id = addressEntity.Id;
-                }
-                // we need to explicitly set the date as if it is not specified
-                // it will default to 01/01/0001 which is not supported by SQL Server and throws and exception
-                if (address.CreatedOnUtc == null)
-                {
-                    address.CreatedOnUtc = DateTime.UtcNow;
-                }
-
-                CustomerService.InsertCustomerAddress(newCustomer, address.ToEntity());
-            }
+            // majako changes: remove these customerDelta.Dto.Addresses since they are vague, provide no billing or shipping information
 
             // majako changes: insert customer billing and shipping addresses
             if (customerDelta.Dto.BillingAddress != null)
@@ -428,6 +412,59 @@ namespace Nop.Plugin.Api.Controllers
                     else
                     {
                         CustomerService.InsertCustomerAddress(currentCustomer, addressEntity);
+                    }
+                }
+            }
+            
+            // majako changes: insert/update customer billing and shipping addresses mapping if not exists
+            // this is due to Order will get address from these
+            if (CustomerService.GetCustomerBillingAddress(currentCustomer) == null)
+            {
+                if (currentCustomer.BillingAddressId > 0)
+                {
+                    CustomerService.InsertCustomerAddress(currentCustomer, _addressService.GetAddressById(currentCustomer.BillingAddressId.Value));
+                }
+                else
+                {
+                    // majako changes: insert customer billing and shipping addresses
+                    if (customerDelta.Dto.BillingAddress != null)
+                    {
+                        var billingAddress = customerDelta.Dto.BillingAddress.ToEntity();
+                        _addressService.InsertAddress(billingAddress);
+                        currentCustomer.BillingAddressId = billingAddress.Id;
+                        // we need to explicitly set the date as if it is not specified
+                        // it will default to 01/01/0001 which is not supported by SQL Server and throws and exception
+                        if (customerDelta.Dto.BillingAddress.CreatedOnUtc == null)
+                        {
+                            billingAddress.CreatedOnUtc = DateTime.UtcNow;
+                        }
+
+                        CustomerService.InsertCustomerAddress(currentCustomer, billingAddress);
+                    }
+                }
+            }
+            if (CustomerService.GetCustomerShippingAddress(currentCustomer) == null)
+            {
+                if (currentCustomer.ShippingAddressId > 0)
+                {
+                    CustomerService.InsertCustomerAddress(currentCustomer, _addressService.GetAddressById(currentCustomer.ShippingAddressId.Value));
+                }
+                else
+                {
+                    // majako changes: insert customer billing and shipping addresses
+                    if (customerDelta.Dto.ShippingAddress != null)
+                    {
+                        var shippingAddress = customerDelta.Dto.ShippingAddress.ToEntity();
+                        _addressService.InsertAddress(shippingAddress);
+                        currentCustomer.ShippingAddressId = shippingAddress.Id;
+                        // we need to explicitly set the date as if it is not specified
+                        // it will default to 01/01/0001 which is not supported by SQL Server and throws and exception
+                        if (customerDelta.Dto.ShippingAddress.CreatedOnUtc == null)
+                        {
+                            shippingAddress.CreatedOnUtc = DateTime.UtcNow;
+                        }
+
+                        CustomerService.InsertCustomerAddress(currentCustomer, shippingAddress);
                     }
                 }
             }
