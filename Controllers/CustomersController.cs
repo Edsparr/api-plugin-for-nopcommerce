@@ -414,8 +414,12 @@ namespace Nop.Plugin.Api.Controllers
                         CustomerService.InsertCustomerAddress(currentCustomer, addressEntity);
                     }
                 }
+
+                // majako changes: if address are enusred above, then we can map the new Id to customer billing and shipping dto, orderly
+                customerDelta.Dto.BillingAddress.Id = customerDelta.Dto.Addresses.First().Id;
+                customerDelta.Dto.ShippingAddress.Id = customerDelta.Dto.Addresses.Last().Id;
             }
-            
+
             // majako changes: insert/update customer billing and shipping addresses mapping if not exists
             // this is due to Order will get address from these
             if (CustomerService.GetCustomerBillingAddress(currentCustomer) == null)
@@ -468,6 +472,12 @@ namespace Nop.Plugin.Api.Controllers
                     }
                 }
             }
+
+            if (customerDelta.Dto.BillingAddress != null && customerDelta.Dto.BillingAddress.Id > 0)
+                currentCustomer.BillingAddressId = customerDelta.Dto.BillingAddress.Id;
+
+            if (customerDelta.Dto.ShippingAddress != null && customerDelta.Dto.ShippingAddress.Id > 0)
+                currentCustomer.ShippingAddressId = customerDelta.Dto.ShippingAddress.Id;
 
             CustomerService.UpdateCustomer(currentCustomer);
 
