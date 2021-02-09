@@ -86,7 +86,7 @@ namespace Nop.Plugin.Api.Helpers
             var productDto = product.ToDto();
 
             PrepareProductImages(product.ProductPictures, productDto);
-            PrepareProductAttributes(product.Attributes, productDto);
+            PrepareProductAttributes(_productAttributeService.GetProductAttributeMappingsByProductId(product.Id), productDto);
             productDto.SeName = _urlRecordService.GetSeName(product);
             productDto.DiscountIds = product.AppliedDiscounts.Select(discount => discount.Id).ToList();
             productDto.ManufacturerIds = product.ProductManufacturers.Select(pm => pm.ManufacturerId).ToList();
