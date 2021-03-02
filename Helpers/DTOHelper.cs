@@ -122,6 +122,8 @@ namespace Nop.Plugin.Api.Helpers
 
             var productPictures = _productService.GetProductPicturesByProductId(product.Id);
             PrepareProductImages(productPictures, productDto);
+            var productAttributeMappings = _productAttributeService.GetProductAttributeMappingsByProductId(product.Id);
+            PrepareProductAttributes(productAttributeMappings, productDto);
 
 
             productDto.SeName = _urlRecordService.GetSeName(product);
