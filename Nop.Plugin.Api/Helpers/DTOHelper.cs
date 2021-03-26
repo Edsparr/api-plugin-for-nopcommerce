@@ -1,76 +1,107 @@
-﻿using Nop.Core;
 using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Localization;
 using Nop.Core.Domain.Media;
 using Nop.Core.Domain.Orders;
+using Nop.Core.Domain.Shipping;
 using Nop.Core.Domain.Stores;
-using Nop.Plugin.Api.DTOs.Categories;
-using Nop.Plugin.Api.DTOs.Customers;
-using Nop.Plugin.Api.DTOs.Images;
-using Nop.Plugin.Api.DTOs.Languages;
-using Nop.Plugin.Api.DTOs.OrderItems;
-using Nop.Plugin.Api.DTOs.Orders;
-using Nop.Plugin.Api.DTOs.Manufacturers;
-using Nop.Plugin.Api.DTOs.ProductAttributes;
-using Nop.Plugin.Api.DTOs.Products;
-using Nop.Plugin.Api.DTOs.ShoppingCarts;
-using Nop.Plugin.Api.DTOs.SpecificationAttributes;
-using Nop.Plugin.Api.DTOs.Stores;
+using Nop.Core.Domain.Tax;
+using Nop.Plugin.Api.DTO.Categories;
+using Nop.Plugin.Api.DTO.Customers;
+using Nop.Plugin.Api.DTO.Images;
+using Nop.Plugin.Api.DTO.Languages;
+using Nop.Plugin.Api.DTO.Manufacturers;
+using Nop.Plugin.Api.DTO.OrderItems;
+using Nop.Plugin.Api.DTO.Orders;
+using Nop.Plugin.Api.DTO.ProductAttributes;
+using Nop.Plugin.Api.DTO.Products;
+using Nop.Plugin.Api.DTO.Shipments;
+using Nop.Plugin.Api.DTO.ShoppingCarts;
+using Nop.Plugin.Api.DTO.SpecificationAttributes;
+using Nop.Plugin.Api.DTO.Stores;
+using Nop.Plugin.Api.DTO.TaxCategory;
 using Nop.Plugin.Api.MappingExtensions;
 using Nop.Plugin.Api.Services;
 using Nop.Services.Catalog;
+using Nop.Services.Common;
+using Nop.Services.Configuration;
+using Nop.Services.Customers;
 using Nop.Services.Directory;
+using Nop.Services.Discounts;
 using Nop.Services.Localization;
 using Nop.Services.Media;
+using Nop.Services.Orders;
 using Nop.Services.Security;
 using Nop.Services.Seo;
+using Nop.Services.Shipping;
 using Nop.Services.Stores;
+using Nop.Services.Tax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Nop.Plugin.Api.DTOs;
+using static Nop.Plugin.Api.Infrastructure.Constants;
 
 namespace Nop.Plugin.Api.Helpers
 {
     public class DTOHelper : IDTOHelper
     {
+        private readonly ISpecificationAttributeService _specificationAttributeService;
+        private readonly CurrencySettings _currencySettings;
         private readonly IAclService _aclService;
         private readonly ICurrencyService _currencyService;
-        private readonly CurrencySettings _currencySettings;
         private readonly ICustomerApiService _customerApiService;
+        private readonly ICustomerService _customerService;
+        private readonly IDiscountService _discountService;
         private readonly ILanguageService _languageService;
         private readonly ILocalizationService _localizationService;
+        private readonly IManufacturerService _manufacturerService;
         private readonly IPictureService _pictureService;
         private readonly IProductAttributeConverter _productAttributeConverter;
         private readonly IProductAttributeService _productAttributeService;
         private readonly IProductService _productService;
         private readonly IProductTagService _productTagService;
+        private readonly ISettingService _settingService;
         private readonly IStoreMappingService _storeMappingService;
         private readonly IStoreService _storeService;
+        private readonly ITaxCategoryService _taxCategoryService;
         private readonly IUrlRecordService _urlRecordService;
+        private readonly IOrderService _orderService;
+        private readonly IShipmentService _shipmentService;
+        private readonly IAddressService _addressService;
 
-        public DTOHelper(IProductService productService,
+        public DTOHelper(ISpecificationAttributeService specificationAttributeService,
+            IProductService productService,
             IAclService aclService,
             IStoreMappingService storeMappingService,
             IPictureService pictureService,
             IProductAttributeService productAttributeService,
             ICustomerApiService customerApiService,
+            ICustomerService customerService,
             IProductAttributeConverter productAttributeConverter,
             ILanguageService languageService,
             ICurrencyService currencyService,
+            IDiscountService discountService,
+            IManufacturerService manufacturerService,
             CurrencySettings currencySettings,
             IStoreService storeService,
             ILocalizationService localizationService,
             IUrlRecordService urlRecordService,
-            IProductTagService productTagService)
+            IProductTagService productTagService,
+            ITaxCategoryService taxCategoryService,
+            ISettingService settingService,
+            IShipmentService shipmentService,
+            IOrderService orderService,
+            IAddressService addressService)
         {
+            this._specificationAttributeService = specificationAttributeService;
             _productService = productService;
             _aclService = aclService;
             _storeMappingService = storeMappingService;
             _pictureService = pictureService;
             _productAttributeService = productAttributeService;
             _customerApiService = customerApiService;
+            _customerService = customerService;
             _productAttributeConverter = productAttributeConverter;
             _languageService = languageService;
             _currencyService = currencyService;
@@ -79,17 +110,28 @@ namespace Nop.Plugin.Api.Helpers
             _localizationService = localizationService;
             _urlRecordService = urlRecordService;
             _productTagService = productTagService;
+            _taxCategoryService = taxCategoryService;
+            _settingService = settingService;
+            _discountService = discountService;
+            _manufacturerService = manufacturerService;
+            _orderService = orderService;
+            _shipmentService = shipmentService;
+            _addressService = addressService;
         }
 
         public ProductDto PrepareProductDTO(Product product)
         {
             var productDto = product.ToDto();
 
-            PrepareProductImages(product.ProductPictures, productDto);
-            PrepareProductAttributes(_productAttributeService.GetProductAttributeMappingsByProductId(product.Id), productDto);
+            var productPictures = _productService.GetProductPicturesByProductId(product.Id);
+            PrepareProductImages(productPictures, productDto);
+            var productAttributeMappings = _productAttributeService.GetProductAttributeMappingsByProductId(product.Id);
+            PrepareProductAttributes(productAttributeMappings, productDto);
+            PrepareProductSpecificationAttributes(_specificationAttributeService.GetProductSpecificationAttributes(product.Id), productDto);
+
             productDto.SeName = _urlRecordService.GetSeName(product);
-            productDto.DiscountIds = product.AppliedDiscounts.Select(discount => discount.Id).ToList();
-            productDto.ManufacturerIds = product.ProductManufacturers.Select(pm => pm.ManufacturerId).ToList();
+            productDto.DiscountIds = _discountService.GetAppliedDiscounts(product).Select(discount => discount.Id).ToList();
+            productDto.ManufacturerIds = _manufacturerService.GetProductManufacturersByProductId(product.Id).Select(pm => pm.Id).ToList();
             productDto.RoleIds = _aclService.GetAclRecords(product).Select(acl => acl.CustomerRoleId).ToList();
             productDto.StoreIds = _storeMappingService.GetStoreMappings(product).Select(mapping => mapping.StoreId)
                 .ToList();
@@ -118,7 +160,34 @@ namespace Nop.Plugin.Api.Helpers
 
             return productDto;
         }
+        public ImageMappingDto PrepareProductPictureDTO(ProductPicture productPicture)
+        {
+            return PrepareProductImageDto(productPicture);
+        }
+        protected ImageMappingDto PrepareProductImageDto(ProductPicture productPicture)
+        {
+            ImageMappingDto imageMapping = null;
 
+            var picture = this._pictureService.GetPictureById(productPicture.PictureId);
+
+            if (productPicture != null)
+            {
+                // We don't use the image from the passed dto directly 
+                // because the picture may be passed with src and the result should only include the base64 format.
+                imageMapping = new ImageMappingDto
+                {
+                    //Attachment = Convert.ToBase64String(picture.PictureBinary),
+                    Id = productPicture.Id,
+                    ProductId = productPicture.ProductId,
+                    PictureId = productPicture.PictureId,
+                    Position = productPicture.DisplayOrder,
+                    MimeType = picture.MimeType,
+                    Src = _pictureService.GetPictureUrl(productPicture.PictureId)
+                };
+            }
+
+            return imageMapping;
+        }
         public CategoryDto PrepareCategoryDTO(Category category)
         {
             var categoryDto = category.ToDto();
@@ -132,7 +201,7 @@ namespace Nop.Plugin.Api.Helpers
             }
 
             categoryDto.SeName = _urlRecordService.GetSeName(category);
-            categoryDto.DiscountIds = category.AppliedDiscounts.Select(discount => discount.Id).ToList();
+            categoryDto.DiscountIds = _discountService.GetAppliedDiscounts(category).Select(discount => discount.Id).ToList();
             categoryDto.RoleIds = _aclService.GetAclRecords(category).Select(acl => acl.CustomerRoleId).ToList();
             categoryDto.StoreIds = _storeMappingService.GetStoreMappings(category).Select(mapping => mapping.StoreId)
                 .ToList();
@@ -155,52 +224,68 @@ namespace Nop.Plugin.Api.Helpers
             return categoryDto;
         }
 
-        public OrderDto PrepareOrderDTO(Order order, bool restrictedAccess = false)
+        public OrderDto PrepareOrderDTO(Order order)
         {
-            var orderDto = order.ToDto();
-
-            orderDto.OrderItems = order.OrderItems.Select(PrepareOrderItemDTO).ToList();
-
-            var customerDto = _customerApiService.GetCustomerById(order.Customer.Id);
-
-            if (customerDto != null)
+            try
             {
-                orderDto.Customer = customerDto.ToOrderCustomerDto();
-            }
+                var orderDto = order.ToDto();
 
-            if (restrictedAccess)
-            {
-                var billingAddress = new AddressDto
+                orderDto.OrderItems = _orderService.GetOrderItems(order.Id).Select(PrepareOrderItemDTO).ToList();
+                orderDto.Shipments = _shipmentService.GetShipmentsByOrderId(order.Id).Select(PrepareShippingItemDTO).ToList();
+                
+                var billingAddress = _addressService.GetAddressById(order.BillingAddressId);
+                orderDto.BillingAddress = billingAddress.ToDto();
+
+                if (order.ShippingAddressId.HasValue)
                 {
-                    CountryName = orderDto.BillingAddress?.CountryName
-                };
+                    var shippingAddress = _addressService.GetAddressById(order.ShippingAddressId.Value);
+                    orderDto.ShippingAddress = shippingAddress.ToDto();
+                }
+                
+                var customerDto = _customerApiService.GetCustomerById(order.CustomerId);
+
+                if (customerDto != null)
+                {
+                    orderDto.Customer = customerDto.ToOrderCustomerDto();
+                }
+
+                return orderDto;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
             
-                var shippingAddress = new AddressDto
-                {
-                    CountryName = orderDto.ShippingAddress?.CountryName
-                };
-
-                orderDto.BillingAddress = billingAddress;
-                orderDto.ShippingAddress = shippingAddress;
-                orderDto.Customer = null;
-            }
-
-            return orderDto;
         }
 
         public ShoppingCartItemDto PrepareShoppingCartItemDTO(ShoppingCartItem shoppingCartItem)
         {
             var dto = shoppingCartItem.ToDto();
-            dto.ProductDto = PrepareProductDTO(shoppingCartItem.Product);
-            dto.CustomerDto = shoppingCartItem.Customer.ToCustomerForShoppingCartItemDto();
+            dto.ProductDto = PrepareProductDTO(_productService.GetProductById(shoppingCartItem.ProductId));
+            dto.CustomerDto = _customerService.GetCustomerById(shoppingCartItem.CustomerId).ToCustomerForShoppingCartItemDto();
             dto.Attributes = _productAttributeConverter.Parse(shoppingCartItem.AttributesXml);
             return dto;
         }
 
+        public ShipmentDto PrepareShippingItemDTO(Shipment shipment)
+        {
+            return new ShipmentDto()
+            {
+                AdminComment = shipment.AdminComment,
+                CreatedOnUtc = shipment.CreatedOnUtc,
+                DeliveryDateUtc = shipment.DeliveryDateUtc,
+                Id = shipment.Id,
+                OrderId = shipment.OrderId,
+                ShippedDateUtc = shipment.ShippedDateUtc,
+                TotalWeight = shipment.TotalWeight,
+                TrackingNumber = shipment.TrackingNumber
+            };
+
+        }
         public OrderItemDto PrepareOrderItemDTO(OrderItem orderItem)
         {
             var dto = orderItem.ToDto();
-            dto.Product = PrepareProductDTO(orderItem.Product);
+            dto.Product = PrepareProductDTO(_productService.GetProductById(orderItem.ProductId));
             dto.Attributes = _productAttributeConverter.Parse(orderItem.AttributesXml);
             return dto;
         }
@@ -221,7 +306,7 @@ namespace Nop.Plugin.Api.Helpers
             return storeDto;
         }
 
-        public LanguageDto PrepateLanguageDto(Language language)
+        public LanguageDto PrepareLanguageDto(Language language)
         {
             var languageDto = language.ToDto();
 
@@ -251,7 +336,7 @@ namespace Nop.Plugin.Api.Helpers
             // Here we prepare the resulted dto image.
             foreach (var productPicture in productPictures)
             {
-                var imageDto = PrepareImageDto(productPicture.Picture);
+                var imageDto = PrepareImageDto(_pictureService.GetPictureById(productPicture.PictureId));
 
                 if (imageDto != null)
                 {
@@ -280,12 +365,13 @@ namespace Nop.Plugin.Api.Helpers
                 image = new ImageDto
                 {
                     //Attachment = Convert.ToBase64String(picture.PictureBinary),
-                    Src = _pictureService.GetPictureUrl(picture)
+                    Src = _pictureService.GetPictureUrl(picture.Id)
                 };
             }
 
             return image;
         }
+
 
         private void PrepareProductAttributes(IEnumerable<ProductAttributeMapping> productAttributeMappings,
             ProductDto productDto)
@@ -308,7 +394,7 @@ namespace Nop.Plugin.Api.Helpers
         }
 
         private ProductAttributeMappingDto PrepareProductAttributeMappingDto(
-            ProductAttributeMapping productAttributeMapping)
+             ProductAttributeMapping productAttributeMapping)
         {
             ProductAttributeMappingDto productAttributeMappingDto = null;
 
@@ -318,54 +404,37 @@ namespace Nop.Plugin.Api.Helpers
                 {
                     Id = productAttributeMapping.Id,
                     ProductAttributeId = productAttributeMapping.ProductAttributeId,
-                    ProductAttributeName = _productAttributeService
-                        .GetProductAttributeById(productAttributeMapping.ProductAttributeId).Name,
+                    ProductAttributeName = _productAttributeService.GetProductAttributeById(productAttributeMapping.ProductAttributeId).Name,
                     TextPrompt = productAttributeMapping.TextPrompt,
                     DefaultValue = productAttributeMapping.DefaultValue,
                     AttributeControlTypeId = productAttributeMapping.AttributeControlTypeId,
                     DisplayOrder = productAttributeMapping.DisplayOrder,
                     IsRequired = productAttributeMapping.IsRequired,
-                    ProductAttributeValues = productAttributeMapping.ProductAttributeValues
-                        .Select(x => PrepareProductAttributeValueDto(x, productAttributeMapping.Product)).ToList()
+                    //TODO: Somnath
+                    //ProductAttributeValues = _productAttributeService.GetProductAttributeValueById(productAttributeMapping.Id).
+                    //                                                .Select(x =>
+                    //                                                            PrepareProductAttributeValueDto(x,
+                    //                                                                                            productAttributeMapping
+                    //                                                                                                .Product))
+                    //                                                .ToList()
                 };
             }
 
             return productAttributeMappingDto;
         }
 
-        private ProductAttributeValueDto PrepareProductAttributeValueDto(ProductAttributeValue productAttributeValue,
-            Product product)
+        public CustomerDto PrepareCustomerDTO(Customer customer)
         {
-            ProductAttributeValueDto productAttributeValueDto = null;
-
-            if (productAttributeValue != null)
+            var result = customer.ToDto();
+            var customerRoles = this._customerService.GetCustomerRoles(customer);
+            foreach (var item in customerRoles)
             {
-                productAttributeValueDto = productAttributeValue.ToDto();
-                if (productAttributeValue.ImageSquaresPictureId > 0)
-                {
-                    var imageSquaresPicture =
-                        _pictureService.GetPictureById(productAttributeValue.ImageSquaresPictureId);
-                    var imageDto = PrepareImageDto(imageSquaresPicture);
-                    productAttributeValueDto.ImageSquaresImage = imageDto;
-                }
-
-                if (productAttributeValue.PictureId > 0)
-                {
-                    // make sure that the picture is mapped to the product
-                    // This is needed since if you delete the product picture mapping from the nopCommerce administrationthe
-                    // then the attribute value is not updated and it will point to a picture that has been deleted
-                    var productPicture =
-                        product.ProductPictures.FirstOrDefault(pp => pp.PictureId == productAttributeValue.PictureId);
-                    if (productPicture != null)
-                    {
-                        productAttributeValueDto.ProductPictureId = productPicture.Id;
-                    }
-                }
+                result.RoleIds.Add(item.Id);
             }
 
-            return productAttributeValueDto;
+            return result;
         }
-       
+
         private void PrepareProductAttributeCombinations(IEnumerable<ProductAttributeCombination> productAttributeCombinations,
             ProductDto productDto)
         {
@@ -411,7 +480,7 @@ namespace Nop.Plugin.Api.Helpers
         {
             return specificationAttribute.ToDto();
         }
-        
+
         public ManufacturerDto PrepareManufacturerDto(Manufacturer manufacturer)
         {
             var manufacturerDto = manufacturer.ToDto();
@@ -425,7 +494,7 @@ namespace Nop.Plugin.Api.Helpers
             }
 
             manufacturerDto.SeName = _urlRecordService.GetSeName(manufacturer);
-            manufacturerDto.DiscountIds = manufacturer.AppliedDiscounts.Select(discount => discount.Id).ToList();
+            manufacturerDto.DiscountIds = _discountService.GetAppliedDiscounts(manufacturer).Select(discount => discount.Id).ToList();
             manufacturerDto.RoleIds = _aclService.GetAclRecords(manufacturer).Select(acl => acl.CustomerRoleId).ToList();
             manufacturerDto.StoreIds = _storeMappingService.GetStoreMappings(manufacturer).Select(mapping => mapping.StoreId)
                 .ToList();
@@ -447,5 +516,45 @@ namespace Nop.Plugin.Api.Helpers
 
             return manufacturerDto;
         }
+
+        
+        public TaxCategoryDto PrepareTaxCategoryDTO(TaxCategory taxCategory)
+        {
+            var taxRateModel = new TaxCategoryDto()
+            {
+                Id = taxCategory.Id,
+                Name = taxCategory.Name,
+                DisplayOrder = taxCategory.DisplayOrder,
+                Rate = _settingService.GetSettingByKey<decimal>(string.Format(Configurations.FixedRateSettingsKey, taxCategory.Id))
+            };
+
+            return taxRateModel;
+        }
+
     }
 }
+
+
+
+//protected ImageMappingDto PrepareProductImageDto(ProductPicture productPicture)
+//{
+//    ImageMappingDto imageMapping = null;
+
+//    if (productPicture != null)
+//    {
+//        // We don't use the image from the passed dto directly 
+//        // because the picture may be passed with src and the result should only include the base64 format.
+//        imageMapping = new ImageMappingDto
+//        {
+//            //Attachment = Convert.ToBase64String(picture.PictureBinary),
+//            Id = productPicture.Id,
+//            ProductId = productPicture.ProductId,
+//            PictureId = productPicture.PictureId,
+//            Position = productPicture.DisplayOrder,
+//            MimeType = productPicture.Picture.MimeType,
+//            Src = _pictureService.GetPictureUrl(productPicture.Picture)
+//        };
+//    }
+
+//    return imageMapping;
+//}
