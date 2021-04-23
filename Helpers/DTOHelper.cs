@@ -146,21 +146,19 @@ namespace Nop.Plugin.Api.Helpers
 
             foreach (var language in allLanguages)
             {
-                var localizedNameDto = new LocalizedNameDto
-                {
-                    LanguageId = language.Id,
-                    LocalizedName = _localizationService.GetLocalized(product, x => x.Name, language.Id)
-                };
+                var localizedNameDto = new LocalizedNameDto {LanguageId = language.Id, LocalizedName = _localizationService.GetLocalized(product, x => x.Name, language.Id)};
 
                 productDto.LocalizedNames.Add(localizedNameDto);
             }
 
             return productDto;
         }
+
         public ImageMappingDto PrepareProductPictureDTO(ProductPicture productPicture)
         {
             return PrepareProductImageDto(productPicture);
         }
+
         protected ImageMappingDto PrepareProductImageDto(ProductPicture productPicture)
         {
             ImageMappingDto imageMapping = null;
@@ -185,6 +183,7 @@ namespace Nop.Plugin.Api.Helpers
 
             return imageMapping;
         }
+
         public CategoryDto PrepareCategoryDTO(Category category)
         {
             var categoryDto = category.ToDto();
@@ -209,11 +208,7 @@ namespace Nop.Plugin.Api.Helpers
 
             foreach (var language in allLanguages)
             {
-                var localizedNameDto = new LocalizedNameDto
-                {
-                    LanguageId = language.Id,
-                    LocalizedName = _localizationService.GetLocalized(category, x => x.Name, language.Id)
-                };
+                var localizedNameDto = new LocalizedNameDto {LanguageId = language.Id, LocalizedName = _localizationService.GetLocalized(category, x => x.Name, language.Id)};
 
                 categoryDto.LocalizedNames.Add(localizedNameDto);
             }
@@ -223,36 +218,28 @@ namespace Nop.Plugin.Api.Helpers
 
         public OrderDto PrepareOrderDTO(Order order)
         {
-            try
+            var orderDto = order.ToDto();
+
+            orderDto.OrderItems = _orderService.GetOrderItems(order.Id).Select(PrepareOrderItemDTO).ToList();
+            orderDto.Shipments = _shipmentService.GetShipmentsByOrderId(order.Id).Select(PrepareShippingItemDTO).ToList();
+
+            var billingAddress = _addressService.GetAddressById(order.BillingAddressId);
+            orderDto.BillingAddress = billingAddress.ToDto();
+
+            if (order.ShippingAddressId.HasValue)
             {
-                var orderDto = order.ToDto();
-
-                orderDto.OrderItems = _orderService.GetOrderItems(order.Id).Select(PrepareOrderItemDTO).ToList();
-                orderDto.Shipments = _shipmentService.GetShipmentsByOrderId(order.Id).Select(PrepareShippingItemDTO).ToList();
-                
-                var billingAddress = _addressService.GetAddressById(order.BillingAddressId);
-                orderDto.BillingAddress = billingAddress.ToDto();
-
-                if (order.ShippingAddressId.HasValue)
-                {
-                    var shippingAddress = _addressService.GetAddressById(order.ShippingAddressId.Value);
-                    orderDto.ShippingAddress = shippingAddress.ToDto();
-                }
-                
-                var customerDto = _customerApiService.GetCustomerById(order.CustomerId);
-
-                if (customerDto != null)
-                {
-                    orderDto.Customer = customerDto.ToOrderCustomerDto();
-                }
-
-                return orderDto;
+                var shippingAddress = _addressService.GetAddressById(order.ShippingAddressId.Value);
+                orderDto.ShippingAddress = shippingAddress.ToDto();
             }
-            catch (Exception ex)
+
+            var customerDto = _customerApiService.GetCustomerById(order.CustomerId);
+
+            if (customerDto != null)
             {
-                throw;
+                orderDto.Customer = customerDto.ToOrderCustomerDto();
             }
-            
+
+            return orderDto;
         }
 
         public ShoppingCartItemDto PrepareShoppingCartItemDTO(ShoppingCartItem shoppingCartItem)
@@ -277,8 +264,8 @@ namespace Nop.Plugin.Api.Helpers
                 TotalWeight = shipment.TotalWeight,
                 TrackingNumber = shipment.TrackingNumber
             };
-
         }
+
         public OrderItemDto PrepareOrderItemDTO(OrderItem orderItem)
         {
             var dto = orderItem.ToDto();
@@ -391,7 +378,7 @@ namespace Nop.Plugin.Api.Helpers
         }
 
         private ProductAttributeMappingDto PrepareProductAttributeMappingDto(
-             ProductAttributeMapping productAttributeMapping)
+            ProductAttributeMapping productAttributeMapping)
         {
             ProductAttributeMappingDto productAttributeMappingDto = null;
 
@@ -502,11 +489,7 @@ namespace Nop.Plugin.Api.Helpers
 
             foreach (var language in allLanguages)
             {
-                var localizedNameDto = new LocalizedNameDto
-                {
-                    LanguageId = language.Id,
-                    LocalizedName = _localizationService.GetLocalized(manufacturer, x => x.Name, language.Id)
-                };
+                var localizedNameDto = new LocalizedNameDto {LanguageId = language.Id, LocalizedName = _localizationService.GetLocalized(manufacturer, x => x.Name, language.Id)};
 
                 manufacturerDto.LocalizedNames.Add(localizedNameDto);
             }
@@ -514,23 +497,15 @@ namespace Nop.Plugin.Api.Helpers
             return manufacturerDto;
         }
 
-        
+
         public TaxCategoryDto PrepareTaxCategoryDTO(TaxCategory taxCategory)
         {
-            var taxRateModel = new TaxCategoryDto()
-            {
-                Id = taxCategory.Id,
-                Name = taxCategory.Name,
-                DisplayOrder = taxCategory.DisplayOrder,
-                Rate = _settingService.GetSettingByKey<decimal>(string.Format(Configurations.FixedRateSettingsKey, taxCategory.Id))
-            };
+            var taxRateModel = new TaxCategoryDto() {Id = taxCategory.Id, Name = taxCategory.Name, DisplayOrder = taxCategory.DisplayOrder, Rate = _settingService.GetSettingByKey<decimal>(string.Format(Configurations.FixedRateSettingsKey, taxCategory.Id))};
 
             return taxRateModel;
         }
-
     }
 }
-
 
 
 //protected ImageMappingDto PrepareProductImageDto(ProductPicture productPicture)
