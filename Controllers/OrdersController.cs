@@ -31,6 +31,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Newtonsoft.Json;
+using Nop.Core.Domain.Logging;
 using static Nop.Plugin.Api.Infrastructure.Constants;
 
 namespace Nop.Plugin.Api.Controllers
@@ -49,6 +51,7 @@ namespace Nop.Plugin.Api.Controllers
         private readonly IProductAttributeConverter _productAttributeConverter;
         private readonly IStoreContext _storeContext;
         private readonly IFactory<Order> _factory;
+        private readonly ILogger _logger;
 
         // We resolve the order settings this way because of the tests.
         // The auto mocking does not support concreate types as dependencies. It supports only interfaces.
@@ -75,7 +78,8 @@ namespace Nop.Plugin.Api.Controllers
             IShippingService shippingService,
             IPictureService pictureService,
             IDTOHelper dtoHelper,
-            IProductAttributeConverter productAttributeConverter)
+            IProductAttributeConverter productAttributeConverter, 
+            ILogger logger)
             : base(jsonFieldsSerializer, aclService, customerService, storeMappingService,
                  storeService, discountService, customerActivityService, localizationService,pictureService)
         {
@@ -90,6 +94,7 @@ namespace Nop.Plugin.Api.Controllers
             _dtoHelper = dtoHelper;
             _productService = productService;
             _productAttributeConverter = productAttributeConverter;
+            _logger = logger;
         }
 
         /// <summary>
@@ -106,6 +111,8 @@ namespace Nop.Plugin.Api.Controllers
         [GetRequestsErrorInterceptorActionFilter]
         public IActionResult GetOrders(OrdersParametersModel parameters)
         {
+            _logger.InsertLog(LogLevel.Debug, "Nop.Plugin.Api /api/orders called", JsonConvert.SerializeObject(parameters));
+            
             if (parameters.Page < Configurations.DefaultPageValue)
             {
                 return Error(HttpStatusCode.BadRequest, "page", "Invalid page parameter");
