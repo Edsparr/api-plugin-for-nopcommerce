@@ -46,6 +46,7 @@ namespace Nop.Plugin.Api.Helpers
 {
     public class DTOHelper : IDTOHelper
     {
+        private readonly ISpecificationAttributeService _specificationAttributeService;
         private readonly CurrencySettings _currencySettings;
         private readonly IAclService _aclService;
         private readonly ICurrencyService _currencyService;
@@ -69,7 +70,8 @@ namespace Nop.Plugin.Api.Helpers
         private readonly IShipmentService _shipmentService;
         private readonly IAddressService _addressService;
 
-        public DTOHelper(IProductService productService,
+        public DTOHelper(ISpecificationAttributeService specificationAttributeService,
+            IProductService productService,
             IAclService aclService,
             IStoreMappingService storeMappingService,
             IPictureService pictureService,
@@ -92,6 +94,7 @@ namespace Nop.Plugin.Api.Helpers
             IOrderService orderService,
             IAddressService addressService)
         {
+            _specificationAttributeService = specificationAttributeService;
             _productService = productService;
             _aclService = aclService;
             _storeMappingService = storeMappingService;
@@ -124,6 +127,7 @@ namespace Nop.Plugin.Api.Helpers
             PrepareProductImages(productPictures, productDto);
             var productAttributeMappings = _productAttributeService.GetProductAttributeMappingsByProductId(product.Id);
             PrepareProductAttributes(productAttributeMappings, productDto);
+            PrepareProductSpecificationAttributes(_specificationAttributeService.GetProductSpecificationAttributes(product.Id), productDto);
 
 
             productDto.SeName = _urlRecordService.GetSeName(product);
