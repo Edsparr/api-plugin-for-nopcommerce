@@ -461,7 +461,13 @@ namespace Nop.Plugin.Api.Helpers
 
         public ProductSpecificationAttributeDto PrepareProductSpecificationAttributeDto(ProductSpecificationAttribute productSpecificationAttribute)
         {
-            return productSpecificationAttribute.ToDto();
+        
+            var result = productSpecificationAttribute.ToDto();
+            var option = _specificationAttributeService.GetSpecificationAttributeOptionsBySpecificationAttribute(productSpecificationAttribute.Id);
+            
+            result.SpecificationAttributeOption = option.FirstOrDefault()?.ToDto();
+            
+            return result;
         }
 
         public SpecificationAttributeDto PrepareSpecificationAttributeDto(SpecificationAttribute specificationAttribute)
