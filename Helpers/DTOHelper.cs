@@ -463,9 +463,9 @@ namespace Nop.Plugin.Api.Helpers
         {
         
             var result = productSpecificationAttribute.ToDto();
-            var option = _specificationAttributeService.GetSpecificationAttributeOptionsBySpecificationAttribute(productSpecificationAttribute.Id);
+            var option = _specificationAttributeService.GetSpecificationAttributeOptionById(productSpecificationAttribute.SpecificationAttributeOptionId);
             
-            result.SpecificationAttributeOption = option.FirstOrDefault()?.ToDto();
+            result.SpecificationAttributeOption = option.ToDto();
             
             return result;
         }
